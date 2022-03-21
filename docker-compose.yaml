@@ -3,15 +3,39 @@ networks:
   roachnet:
     driver: bridge
 services:
+  roach_test_client:
+    container_name: roach_test_client
+    hostname: roach_test_client
+    build:
+      context: ./app
+      dockerfile: ./Dockerfile.go
+    networks:
+      - roachnet
+    depends_on:
+      - roach_alb
+  roach_alb:
+    container_name: roach_alb
+    hostname: roach_alb
+    build: 
+      context: .
+      dockerfile: ./Dockerfile.nginx
+    networks:
+      - roachnet
+    restart: always
+    ports:
+      - 26257:26257
+      - 8080:8080
+    depends_on:
+      - roach1
+      - roach2
+      - roach3
   roach1:
     image: cockroachdb/cockroach:v21.2.7
     container_name: roach1
     hostname: roach1
+    restart: always
     networks:
       - roachnet
-    ports:
-      - 26257:26257
-      - 8080:8080
     volumes:
       - "${PWD}/cockroach-data/roach1:/cockroach/cockroach-data"
     command: start --insecure --join=roach1,roach2,roach3
@@ -19,10 +43,9 @@ services:
     image: cockroachdb/cockroach:v21.2.7
     container_name: roach2
     hostname: roach2
+    restart: always
     networks:
       - roachnet
-    ports:
-      - 26258:26257
     volumes:
       - "${PWD}/cockroach-data/roach2:/cockroach/cockroach-data"
     command: start --insecure --join=roach1,roach2,roach3
@@ -30,10 +53,9 @@ services:
     image: cockroachdb/cockroach:v21.2.7
     container_name: roach3
     hostname: roach3
+    restart: always
     networks:
       - roachnet
-    ports:
-      - 26259:26257
     volumes:
       - "${PWD}/cockroach-data/roach3:/cockroach/cockroach-data"
     command: start --insecure --join=roach1,roach2,roach3
